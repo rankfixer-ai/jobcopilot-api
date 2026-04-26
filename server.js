@@ -3,10 +3,11 @@
 // Full Rewrite
 // ==========================================================
 
-const path = require("path");
-require("dotenv").config({
-  path: path.join(__dirname, ".env"),
-});
+// Load .env only in local development
+if (process.env.NODE_ENV !== 'production') {
+  const path = require("path");
+  require("dotenv").config({ path: path.join(__dirname, ".env") });
+}
 
 const express = require("express");
 const cors = require("cors");
