@@ -93,13 +93,14 @@ const authLimiter = rateLimit({
 /* Constants */
 /* -------------------------------------------------------------------------- */
 
-const JOB_SELECT = `
-id,title,company,city,category,source_id,source_url,source_job_id,
-salary_range,salary_min,salary_max,
-description,employment_type,remote_type,
-created_at,updated_at,is_active,
-source:sources(name)
-`;
+const JOB_SELECT = [
+  "id","title","company","city","category","source_id","source_url","source_job_id",
+  "salary_range","salary_min","salary_max",
+  "description","employment_type","remote_type",
+  "created_at","updated_at","is_active",
+  "source:sources(name)"
+].join(",");
+
 
 const SYNONYMS = {
   va: ["virtual assistant", "admin assistant"],
@@ -175,29 +176,7 @@ const applicationSchema = z.object({
 /* Auth Middleware */
 /* -------------------------------------------------------------------------- */
 
-async function requireAuth(req, res, next) {
-  try {
-    const auth = req.headers.authorization || "";
-
-    if (!auth.startsWith("Bearer ")) {
-      return fail(res, 401, "Missing token");
-    }
-
-    const token = auth.replace("Bearer ", "").trim();
-
-    const { data, error } = await supabase.auth.getUser(token);
-
-    if (error || !data?.user) {
-      return fail(res, 401, "Invalid token");
-    }
-
-    req.user = data.user;
-    next();
-  } catch {
-    return fail(res, 401, "Unauthorized");
-  }
-}
-
+const requireAuth = require("./middleware/auth");
 /* -------------------------------------------------------------------------- */
 /* Health */
 /* -------------------------------------------------------------------------- */
