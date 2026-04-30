@@ -331,7 +331,7 @@ app.get("/api/jobs", async (req, res) => {
       query = query.or(clauses.join(","));
     }
 
-    if (city) query = query.ilike("city", `%${city}%`);
+    if (city) query = query.ilike("city", "%" + city + "%");
     if (remote) query = query.eq("remote_type", "remote");
 
     const from = (page - 1) * limit;
@@ -402,7 +402,7 @@ app.get("/api/search/suggest", async (req, res) => {
   const { data } = await admin
     .from("jobs_clean")
     .select("title")
-    .ilike("title", `%${q}%`)
+    .ilike("title", "%" + q + "%")
     .eq("is_active", true)
     .limit(8);
 
