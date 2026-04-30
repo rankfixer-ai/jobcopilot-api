@@ -124,6 +124,7 @@ app.post("/api/auth/login", async (req, res) => {
 });
 
 app.post("/api/auth/register", async (req, res) => {
+console.log("REGISTER HIT");
   try {
     const { email, password, full_name } = req.body;
 
