@@ -320,15 +320,15 @@ app.get("/api/jobs", async (req, res) => {
     if (keyword) {
       const terms = expandKeyword(keyword);
 
-      const parts = [];
+            const clauses = [];
 
-      for (const term of terms) {
-        parts.push(`title.ilike.%${term}%`);
-        parts.push(`company.ilike.%${term}%`);
-        parts.push(`description.ilike.%${term}%`);
-      }
+      terms.forEach(function(term) {
+        clauses.push("title.ilike.%" + term + "%");
+        clauses.push("company.ilike.%" + term + "%");
+        clauses.push("description.ilike.%" + term + "%");
+      });
 
-      query = query.or(parts.join(","));
+      query = query.or(clauses.join(","));
     }
 
     if (city) query = query.ilike("city", `%${city}%`);
