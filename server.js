@@ -54,7 +54,11 @@ app.post('/api/auth/register', async (req, res) => {
   const { data, error } = await supabaseAuth.auth.signUp({ email, password });
   if (error) return res.status(400).json({ success: false, error: error.message });
   
-  const { error: pErr } = await supabaseAdmin.from('profiles').insert([{ id: data.user.id, email, full_name, role }]);
+  const { error: pErr } = await supabaseAdmin.from('profiles').insert([{ 
+  id: data.user.id, 
+  full_name: full_name, 
+  role: role 
+}]);
   if (pErr) return res.status(500).json({ success: false, error: 'Profile creation failed' });
   
   res.json({ success: true, data: data });
