@@ -1,4 +1,3 @@
-```javascript
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -58,14 +57,14 @@ app.post('/api/auth/register', async (req, res) => {
   const { error: pErr } = await supabaseAdmin.from('profiles').insert([{ id: data.user.id, email, full_name, role }]);
   if (pErr) return res.status(500).json({ success: false, error: 'Profile creation failed' });
   
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   const { data, error } = await supabaseAuth.auth.signInWithPassword({ email, password });
   if (error) return res.status(400).json({ success: false, error: error.message });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
 app.get('/api/jobs', async (req, res) => {
@@ -82,23 +81,21 @@ app.get('/api/jobs', async (req, res) => {
   const { data, count, error } = await query.range(start, end).order('created_at', { ascending: false });
   if (error) return res.status(500).json({ success: false, error: error.message });
   
-  res.json({ success: true, data, pagination: { total: count, page: parseInt(page), limit: parseInt(limit) } });
+  res.json({ success: true, data: data, pagination: { total: count, page: parseInt(page), limit: parseInt(limit) } });
 });
 
-// Fix 1: Featured jobs filter update
 app.get('/api/jobs/featured', async (req, res) => {
   const { data, error } = await supabaseAdmin.from('jobs_clean').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(6);
   if (error) return res.status(500).json({ success: false, error: error.message });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
 app.get('/api/jobs/:id', async (req, res) => {
   const { data, error } = await supabaseAdmin.from('jobs_clean').select('*').eq('id', req.params.id).single();
   if (error) return res.status(404).json({ success: false, error: 'Job not found' });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
-// Fix 3: Stats matching frontend
 app.get('/api/stats', async (req, res) => {
   const { count: total } = await supabaseAdmin.from('jobs_clean').select('*', { count: 'exact', head: true }).eq('is_active', true);
   const { count: remote } = await supabaseAdmin.from('jobs_clean').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('remote_type', 'remote');
@@ -108,21 +105,57 @@ app.get('/api/stats', async (req, res) => {
 app.get('/api/categories', async (req, res) => {
   const { data, error } = await supabaseAdmin.from('categories').select('*').order('name', { ascending: true });
   if (error) return res.status(500).json({ success: false, error: error.message });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
 app.get('/api/search/suggest', async (req, res) => {
   const { q } = req.query;
   const { data, error } = await supabaseAdmin.from('jobs_clean').select('title').ilike('title', '%' + q + '%').limit(5);
   if (error) return res.status(500).json({ success: false, error: error.message });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
-// Fix 2: Trending uses search_terms table
 app.get('/api/trending', async (req, res) => {
   const { data, error } = await supabaseAdmin.from('search_terms').select('*').order('count', { ascending: false }).limit(5);
   if (error) return res.status(500).json({ success: false, error: error.message });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
+});
+
+// --- NEW: PUBLIC JOB SEEKER PROFILE ENDPOINTS ---
+
+app.get('/api/profile/:id', async (req, res) => {
+  const { data, error } = await supabaseAdmin.from('profiles').select('full_name, headline, bio, city, job_title').eq('id', req.params.id).eq('role', 'job_seeker').single();
+  if (error) return res.status(404).json({ success: false, error: 'Profile not found' });
+  res.json({ success: true, data: data });
+});
+
+app.get('/api/profiles/search', async (req, res) => {
+  const { q } = req.query;
+  const { data, error } = await supabaseAdmin.from('profiles')
+    .select('id, full_name, headline, city, job_title')
+    .eq('role', 'job_seeker')
+    .or('full_name.ilike.%' + q + '%,headline.ilike.%' + q + '%');
+  if (error) return res.status(500).json({ success: false, error: error.message });
+  res.json({ success: true, data: data });
+});
+
+// --- NEW: FIND CLIENTS (EMPLOYER DIRECTORY) ENDPOINTS ---
+
+app.get('/api/employers', async (req, res) => {
+  const { q, city } = req.query;
+  let query = supabaseAdmin.from('companies').select('*');
+  if (q) query = query.ilike('name', '%' + q + '%');
+  if (city) query = query.ilike('city', '%' + city + '%');
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ success: false, error: error.message });
+  res.json({ success: true, data: data });
+});
+
+app.get('/api/employers/:id', async (req, res) => {
+  const { data: company, error: cErr } = await supabaseAdmin.from('companies').select('*').eq('id', req.params.id).single();
+  if (cErr) return res.status(404).json({ success: false, error: 'Employer not found' });
+  const { data: jobs } = await supabaseAdmin.from('jobs_clean').select('*').eq('employer_id', req.params.id).eq('is_active', true);
+  res.json({ success: true, data: { company: company, jobs: jobs } });
 });
 
 // --- AUTHENTICATED SEEKER ENDPOINTS ---
@@ -130,7 +163,7 @@ app.get('/api/trending', async (req, res) => {
 app.get('/api/saved', requireAuth, async (req, res) => {
   const { data, error } = await supabaseAdmin.from('saved_jobs').select('job_id, jobs_clean(*)').eq('user_id', req.user.id);
   if (error) return res.status(500).json({ success: false, error: error.message });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
 app.post('/api/saved/:jobId', requireAuth, async (req, res) => {
@@ -148,14 +181,14 @@ app.delete('/api/saved/:jobId', requireAuth, async (req, res) => {
 app.get('/api/applications', requireAuth, async (req, res) => {
   const { data, error } = await supabaseAdmin.from('applications').select('*, jobs_clean(title, company)').eq('user_id', req.user.id);
   if (error) return res.status(500).json({ success: false, error: error.message });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
 app.post('/api/applications', requireAuth, async (req, res) => {
   const { job_id, resume_url, cover_letter } = req.body;
   const { data, error } = await supabaseAdmin.from('applications').insert([{ user_id: req.user.id, job_id, resume_url, cover_letter, status: 'pending' }]);
   if (error) return res.status(500).json({ success: false, error: error.message });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
 app.put('/api/applications/:id', requireAuth, async (req, res) => {
@@ -173,7 +206,7 @@ app.delete('/api/applications/:id', requireAuth, async (req, res) => {
 app.get('/api/profile', requireAuth, async (req, res) => {
   const { data, error } = await supabaseAdmin.from('profiles').select('*').eq('id', req.user.id).single();
   if (error) return res.status(500).json({ success: false, error: error.message });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
 app.put('/api/profile', requireAuth, async (req, res) => {
@@ -187,7 +220,7 @@ app.put('/api/profile', requireAuth, async (req, res) => {
 app.get('/api/employer/jobs', requireAuth, requireRole('employer'), async (req, res) => {
   const { data, error } = await supabaseAdmin.from('jobs_clean').select('*, applications(count)').eq('employer_id', req.user.id);
   if (error) return res.status(500).json({ success: false, error: error.message });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
 app.post('/api/employer/jobs', requireAuth, requireRole('employer'), async (req, res) => {
@@ -199,7 +232,7 @@ app.post('/api/employer/jobs', requireAuth, requireRole('employer'), async (req,
 app.get('/api/employer/jobs/:id/applicants', requireAuth, requireRole('employer'), async (req, res) => {
   const { data, error } = await supabaseAdmin.from('applications').select('*, profiles(full_name, email)').eq('job_id', req.params.id);
   if (error) return res.status(500).json({ success: false, error: error.message });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
 app.put('/api/employer/applications/:id', requireAuth, requireRole('employer'), async (req, res) => {
@@ -221,7 +254,7 @@ app.get('/api/admin/stats', requireAuth, requireRole('admin'), async (req, res) 
 app.get('/api/admin/companies', requireAuth, requireRole('admin'), async (req, res) => {
   const { data, error } = await supabaseAdmin.from('profiles').select('*').eq('role', 'employer');
   if (error) return res.status(500).json({ success: false, error: error.message });
-  res.json({ success: true, data });
+  res.json({ success: true, data: data });
 });
 
 app.put('/api/admin/companies/:id', requireAuth, requireRole('admin'), async (req, res) => {
@@ -231,5 +264,3 @@ app.put('/api/admin/companies/:id', requireAuth, requireRole('admin'), async (re
 });
 
 app.listen(PORT, () => console.log('Server is running on port ' + PORT));
-
-```
