@@ -266,5 +266,39 @@ app.put('/api/admin/companies/:id', requireAuth, requireRole('admin'), async (re
   if (error) return res.status(500).json({ success: false, error: error.message });
   res.json({ success: true });
 });
+// Skills
+app.post('/api/skills', requireAuth, async (req, res) => {
+  const { data, error } = await supabaseAdmin.from('user_skills').insert([{ ...req.body, user_id: req.user.id }]).select().single();
+  if (error) return res.status(500).json({ success: false, error: error.message });
+  res.json({ success: true, data: data });
+});
 
+app.delete('/api/skills/:id', requireAuth, async (req, res) => {
+  await supabaseAdmin.from('user_skills').delete().eq('id', req.params.id).eq('user_id', req.user.id);
+  res.json({ success: true });
+});
+
+// Experience
+app.post('/api/experience', requireAuth, async (req, res) => {
+  const { data, error } = await supabaseAdmin.from('user_experience').insert([{ ...req.body, user_id: req.user.id }]).select().single();
+  if (error) return res.status(500).json({ success: false, error: error.message });
+  res.json({ success: true, data: data });
+});
+
+app.delete('/api/experience/:id', requireAuth, async (req, res) => {
+  await supabaseAdmin.from('user_experience').delete().eq('id', req.params.id).eq('user_id', req.user.id);
+  res.json({ success: true });
+});
+
+// Education
+app.post('/api/education', requireAuth, async (req, res) => {
+  const { data, error } = await supabaseAdmin.from('user_education').insert([{ ...req.body, user_id: req.user.id }]).select().single();
+  if (error) return res.status(500).json({ success: false, error: error.message });
+  res.json({ success: true, data: data });
+});
+
+app.delete('/api/education/:id', requireAuth, async (req, res) => {
+  await supabaseAdmin.from('user_education').delete().eq('id', req.params.id).eq('user_id', req.user.id);
+  res.json({ success: true });
+});
 app.listen(PORT, () => console.log('Server is running on port ' + PORT));
