@@ -14,7 +14,10 @@ const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABAS
 const supabaseAuth = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: ['https://jobcopilotph.vercel.app', 'http://localhost:3000'],
+  credentials: true
+}));
 app.use(morgan('dev'));
 app.use(compression());
 app.use(express.json());
