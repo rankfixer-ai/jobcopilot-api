@@ -217,11 +217,22 @@ app.get('/api/profile', requireAuth, async (req, res) => {
 });
 
 app.put('/api/profile', requireAuth, async (req, res) => {
-  const { error } = await supabaseAdmin.from('profiles').update(req.body).eq('id', req.user.id);
-  if (error) return res.status(500).json({ success: false, error: error.message });
-  res.json({ success: true });
+  var updates = {};
+  var fields = ['full_name', 'phone', 'location', 'job_title', 'linkedin_url', 'bio', 'resume_url'];
+  fields.forEach(function(f) {
+    if (req.body[f] !== undefined && req.body[f] !== '') {
+      updates[f] = req.body[f];
+    }
+  });
+  
+  if (Object.keys(updates).length === 0) {
+    return res.json({ success: true, data: profData });
+  }
+  
+  var { data, error } = await supabaseAdmin.from('profiles').update(updates).eq('id', req.user.id).select().single();
+  if (error) return res.status(400).json({ success: false, error: error.message });
+  res.json({ success: true, data: data });
 });
-
 // --- EMPLOYER ENDPOINTS ---
 
 app.get('/api/employer/jobs', requireAuth, requireRole('employer'), async (req, res) => {
