@@ -190,7 +190,7 @@ app.get('/api/applications', requireAuth, async (req, res) => {
 
 app.post('/api/applications', requireAuth, async (req, res) => {
   const { job_id, resume_url, cover_letter } = req.body;
-  const { data, error } = await supabaseAdmin.from('applications').insert([{ user_id: req.user.id, job_id, resume_url, cover_letter, status: 'pending' }]);
+  const { data, error } = await supabaseAdmin.from('applications').insert([{ user_id: req.user.id, job_id, resume_url, cover_letter, status: 'applied' }]);
   if (error) return res.status(500).json({ success: false, error: error.message });
   res.json({ success: true, data: data });
 });
